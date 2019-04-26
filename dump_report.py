@@ -44,11 +44,12 @@ except psycopg2.DatabaseError, e:
 """ MAIN FUNCTION """
 def main():
     if (options.i):
-        time_query="extract(epoch from completed_ts::timestamptz at time zone 'UTC') "
+        time_query="extract(epoch from completed_ts) "
     else:
-        time_query="completed_ts::timestamptz at time zone 'UTC' "
+        time_query="completed_ts "
 
-    query ="SELECT display_name, status_code, "\
+    query = "SET SESSION timezone TO 'UTC';"\
+    "SELECT display_name, status_code, "\
     "(CASE WHEN status_code = 30000 THEN 'OK' "\
     "WHEN status_code = 30005 THEN 'WARN' "\
     "ELSE 'FAIL' END) as clinic_status, "\
@@ -57,7 +58,7 @@ def main():
     "cast((bytes_scanned)/1024/1024/1024 as numeric(30,4)), "\
     "cast((bytes_new)/1024/1024/1024 as numeric(30,4)), "\
     + time_query + "FROM v_activities_2 WHERE "\
-    "(completed_ts::timestamp at time zone 'UTC' > current_timestamp - interval '" + str(options.D) + " day') "\
+    "(completed_ts > current_timestamp - interval '" + str(options.D) + " day') "\
     "and (v_activities_2.type like '%Backup%') Order By completed_ts;"
 
     try:
@@ -74,7 +75,7 @@ def main():
                 (options.C, influxserver_name, row[1], row[2], influxplugin_name, row[4], calc_seconds, row[6], row[7], influxtime))
             else:
                 print('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % \
-                (row[0], row[1], row[2], row[3], row[4], calc_seconds, row[6], row[7], row[8].isoformat()))
+                (row[0], row[1], row[2], row[3], row[4], calc_seconds, row[6], row[7], row[8].strftime("%A, %d. %B %Y %I:%M%p (UTC)")))
         cur.close()
         conn.close()
         sys.exit(0)
